@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import { Button } from '../../components/Button';
-import { vi } from 'vitest';
 
 describe('Button - Unit Behavior Tests', () => {
   it('renders with default primary variant', () => {

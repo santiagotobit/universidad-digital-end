@@ -9,14 +9,14 @@ export type TaskForTest = { id: number; text: string; completed: boolean };
 
 export function createTaskListMocks() {
   return {
-    onToggle: vi.fn(),
-    onDelete: vi.fn(),
+    onToggle: vi.fn<(id: number) => void>(),
+    onDelete: vi.fn<(id: number) => void>(),
   };
 }
 
 export function renderTaskList(
   tasks: TaskForTest[],
-  { onToggle, onDelete }: { onToggle: ReturnType<typeof vi.fn>; onDelete: ReturnType<typeof vi.fn> }
+  { onToggle, onDelete }: { onToggle: (id: number) => void; onDelete: (id: number) => void }
 ) {
   return render(<TaskList tasks={tasks} onToggle={onToggle} onDelete={onDelete} />);
 }

@@ -1,10 +1,11 @@
 import axios, { type AxiosError } from "axios";
 
 type ApiDetail = string | { msg?: string }[];
+type ApiResponseData = { detail?: ApiDetail } | string;
 
 export function getErrorMessage(error: unknown, fallback = "Ocurrió un error inesperado.") {
   if (axios.isAxiosError(error)) {
-    const ax = error as AxiosError<{ detail?: ApiDetail }>;
+    const ax = error as AxiosError<ApiResponseData>;
     if (ax.code === "ECONNABORTED") {
       return "Tiempo de espera agotado: el servidor o la base de datos tardaron demasiado (suele pasar con Cloud SQL desde local). Prueba de nuevo o revisa la red.";
     }

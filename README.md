@@ -187,13 +187,29 @@ La integración continua se gestiona con GitHub Actions en `.github/workflows/ci
 
 ### Estatus actual
 
-El pipeline valida calidad y build, pero aún no realiza despliegue automático a GCP.
+El pipeline valida calidad y build. Actualmente el frontend puede permanecer desplegado en Vercel, y sólo el backend se despliega automáticamente a Google Cloud Run desde la rama `main`.
+
+### Secretos necesarios para despliegue automático del backend
+
+Para que el deploy funcione en GitHub Actions debes definir estos secretos en el repositorio:
+
+- `GCP_PROJECT` — ID del proyecto de Google Cloud.
+- `GCP_REGION` — región para Cloud Run, por ejemplo `us-central1`.
+- `GCP_SA_KEY` — JSON de la cuenta de servicio con permisos de Cloud Run y Container Registry.
+- `APP_DATABASE_URL` — cadena de conexión PostgreSQL para producción.
+- `APP_JWT_SECRET` — secreto JWT seguro.
+- `APP_CORS_ORIGINS` — URL del frontend desplegado en Vercel, por ejemplo `https://mi-app.vercel.app`.
+
+### Notas para Vercel
+
+- En Vercel debes configurar `VITE_API_BASE_URL` con la URL del servicio de backend de Cloud Run.
+- El frontend no se despliega desde este pipeline; el servicio en Vercel consumirá el backend de Cloud Run.
 
 ### Próximo paso recomendado
 
-- Extender el pipeline para desplegar a **Cloud Run**.
-- Usar **Cloud Build** para construir imágenes y publicar artefactos.
-- Conectar la base de datos a **Cloud SQL**.
+- Desplegar solo el backend a **Cloud Run**.
+- Mantener el frontend en **Vercel** con `VITE_API_BASE_URL` apuntando al backend.
+- Asegurar que `APP_CORS_ORIGINS` incluya la URL de Vercel.
 
 ---
 

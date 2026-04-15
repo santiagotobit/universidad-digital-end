@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.models import RevokedToken
 from app.core.config import settings
-from app.core.errors import ForbiddenError, NotFoundError, UnauthorizedError
+from app.core.errors import AppError, ForbiddenError, NotFoundError, UnauthorizedError
 from app.core.security import create_access_token, decode_access_token, is_jwt_error, verify_password
 from app.users.models import User
 
@@ -23,6 +23,8 @@ def authenticate_user(db: Session, email: str, password: str) -> User:
         if not user.is_active:
             raise ForbiddenError("Usuario inactivo.")
         return user
+    except AppError:
+        raise
     except Exception as exc:
         raise UnauthorizedError("Error al autenticar.") from exc
     

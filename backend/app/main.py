@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings

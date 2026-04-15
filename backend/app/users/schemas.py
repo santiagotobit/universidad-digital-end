@@ -13,6 +13,13 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     role_ids: list[int] | None = None
 
+    @field_validator("password")
+    @classmethod
+    def _validate_password_bcrypt_bytes(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("La contraseña no puede superar 72 bytes.")
+        return value
+
 
 class UserUpdate(BaseModel):
     """Datos permitidos para actualizar un usuario."""
@@ -21,6 +28,13 @@ class UserUpdate(BaseModel):
     password: str | None = Field(default=None, min_length=8, max_length=128)
     is_active: bool | None = None
     role_ids: list[int] | None = None
+
+    @field_validator("password")
+    @classmethod
+    def _validate_password_bcrypt_bytes(cls, value: str | None) -> str | None:
+        if value is not None and len(value.encode("utf-8")) > 72:
+            raise ValueError("La contraseña no puede superar 72 bytes.")
+        return value
 
 
 class UserResponse(BaseModel):

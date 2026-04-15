@@ -17,7 +17,10 @@ import type { UserResponse } from "../../api/auth";
 const createSchema = z.object({
   email: z.string().email(),
   full_name: z.string().min(2),
-  password: z.string().min(8),
+  password: z
+    .string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres.")
+    .max(72, "La contraseña no puede superar 72 caracteres."),
   role_id: z.string().min(1)
 });
 

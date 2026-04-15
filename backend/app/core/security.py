@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import bcrypt
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -13,21 +12,26 @@ from app.core.config import settings
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+def _validate_bcrypt_password_bytes(password: str) -> None:
+    """bcrypt admite máximo 72 bytes en UTF-8."""
+    if len(password.encode("utf-8")) > 72:
+        raise ValueError("La contraseña no puede superar 72 bytes en UTF-8.")
+
+
 def hash_password(password: str) -> str:
     """Genera un hash seguro para contraseñas."""
-    password = password[:72]  # bcrypt solo admite hasta 72 bytes
+    _validate_bcrypt_password_bytes(password)
     return _pwd_context.hash(password)
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
     """Verifica una contraseña contra su hash."""
-    password = password.encode()[:72] # bcrypt solo admite hasta 72 bytes
-    if isinstance(password, str):
-        password = password.encode('utf-8')
-    if isinstance(hashed_password, str):
-        hashed_password = hashed_password.encode('utf-8')
-
-    return bcrypt.checkpw(password, hashed_password)
+    try:
+        _validate_bcrypt_password_bytes(password)
+    except ValueError:
+        # Si viene una contraseña demasiado larga, nunca coincidirá con el hash almacenado.
+        return False
+    return _pwd_context.verify(password, hashed_password)
 
 
 def create_access_token(subject: str, jti: str, expires_minutes: int | None = None) -> str:

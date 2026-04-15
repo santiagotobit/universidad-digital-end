@@ -12,7 +12,10 @@ import { sanitizeText } from "../utils/sanitize";
 
 const loginSchema = z.object({
   email: z.string().email("Ingresa un email válido."),
-  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres.")
+  password: z
+    .string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres.")
+    .max(72, "La contraseña no puede superar 72 caracteres.")
 });
 
 type LoginForm = z.infer<typeof loginSchema>;

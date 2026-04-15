@@ -47,13 +47,25 @@ echo "✅ Imagen construida y subida correctamente"
 # =========================
 SERVICE_NAME="cloud-run-plataforma-universidad"
 
+APP_ENV=${APP_ENV:-production}
+
+if [ -z "$APP_DATABASE_URL" ] || [ -z "$APP_JWT_SECRET" ] || [ -z "$APP_CORS_ORIGINS" ]; then
+  echo "❌ Faltan variables de entorno obligatorias para Cloud Run."
+  echo "Define APP_DATABASE_URL, APP_JWT_SECRET y APP_CORS_ORIGINS antes de ejecutar este script."
+  exit 1
+fi
+
+APP_COOKIE_SECURE=${APP_COOKIE_SECURE:-true}
+APP_COOKIE_SAMESITE=${APP_COOKIE_SAMESITE:-none}
+
 echo "Desplegando en Cloud Run..."
 
 gcloud run deploy $SERVICE_NAME \
   --image $IMAGE_URI \
   --platform managed \
   --region $REGION \
-  --allow-unauthenticated
+  --allow-unauthenticated \
+  --set-env-vars "APP_ENV=$APP_ENV,APP_DATABASE_URL=$APP_DATABASE_URL,APP_JWT_SECRET=$APP_JWT_SECRET,APP_CORS_ORIGINS=$APP_CORS_ORIGINS,APP_COOKIE_SECURE=$APP_COOKIE_SECURE,APP_COOKIE_SAMESITE=$APP_COOKIE_SAMESITE"
 
 if [ $? -ne 0 ]; then
   echo "❌ Error en el deploy"

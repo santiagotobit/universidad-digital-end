@@ -3,15 +3,37 @@ import axios from "axios";
 function resolveApiBaseUrl(): string {
   const raw = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
   const fallback = "/api";
-  if (!raw) return fallback;
-  // Mismo host distinto puerto (3000 vs 8000) es otro origen: la cookie HttpOnly+Lax no viaja en XHR.
-  // En dev, usar siempre el proxy de Vite para que cookie y credenciales sean mismo origen.
+
+  if (!raw) {
+    const message =
+      import.meta.env.DEV
+        ? "VITE_API_BASE_URL no está definido. Usando proxy /api en desarrollo."
+        : "[API] VITE_API_BASE_URL no está definido en producción. Define esta variable en Vercel y redepliega.";
+    console.error(message);
+    if (!import.meta.env.DEV) {
+      throw new Error(message);
+    }
+    return fallback;
+  }
+
+  if (!import.meta.env.DEV && raw.startsWith("http://")) {
+    const message =
+      "[API] VITE_API_BASE_URL está usando HTTP en producción. Debe ser HTTPS para evitar Mixed Content.";
+    console.error(message, { raw });
+    throw new Error(message);
+  }
+
   if (
     import.meta.env.DEV &&
     /^https?:\/\/(localhost|127\.0\.0\.1):8000\/?$/i.test(raw.replace(/\/+$/, ""))
   ) {
+    console.warn(
+      "Usando proxy Vite para /api en desarrollo en lugar de conecta directamente a localhost:8000."
+    );
     return fallback;
   }
+
+  console.info("[API] baseURL resuelta:", raw);
   return raw;
 }
 

@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from sqlalchemy.exc import IntegrityError, OperationalError, ProgrammingError
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
@@ -24,6 +25,7 @@ from app.tasks.routes import router as tasks_router
 
 
 app = FastAPI(title=settings.api_title, version=settings.api_version)
+app.add_middleware(ProxyHeadersMiddleware)
 
 if settings.is_production:
     if not settings.jwt_secret:

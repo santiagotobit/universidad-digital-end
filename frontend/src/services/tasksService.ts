@@ -5,4 +5,5 @@ export const tasksService = {
   get: tasksApi.getTask,
   create: tasksApi.createTask,
   update: tasksApi.updateTask,
+  remove: tasksApi.deleteTask,
 };

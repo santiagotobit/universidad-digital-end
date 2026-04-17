@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user_dep, get_db
 from app.tasks.schemas import TaskCreate, TaskResponse, TaskUpdate
-from app.tasks.services import create_task, get_task, list_tasks, update_task
+from app.tasks.services import create_task, delete_task, get_task, list_tasks, update_task
 from app.users.models import User
 
 
@@ -91,3 +91,13 @@ def update_task_endpoint(
         created_at=task.created_at,
         created_by=task.created_by_id,
     )
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task_endpoint(
+    task_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user_dep),
+) -> None:
+    """Elimina una tarea del usuario autenticado."""
+    delete_task(db, task_id, user)

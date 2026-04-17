@@ -10,34 +10,24 @@ import { Spinner } from "../../components/Spinner";
 import { tasksService } from "../../services/tasksService";
 import { useFetch } from "../../hooks/useFetch";
 import { getErrorMessage } from "../../utils/apiError";
-import type { Task, TaskCreate } from "../../api/tasks";
-
-const getTodayDateString = () => {
-  const today = new Date();
-  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-  return today.toISOString().split("T")[0];
-};
+import type { Task, TaskCreate, TaskUpdate } from "../../api/tasks";
 
 const taskSchema = z.object({
   title: z.string().min(1, "Título requerido"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high"]).default("medium"),
-  due_date: z
-    .string()
-    .optional()
-    .refine((value) => !value || value >= getTodayDateString(), {
-      message: "La fecha límite no puede ser anterior a hoy",
-    }),
+  status: z.enum(["pending", "completed"]).optional(),
 });
 
 type TaskForm = z.infer<typeof taskSchema>;
 
 export function TasksPage() {
-  const minDueDate = getTodayDateString();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskBeingEdited, setTaskBeingEdited] = useState<Task | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [alert, setAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const fetchTasks = useCallback(
     () => tasksService.list({ search: search || undefined, status: filterStatus || undefined }),
     [search, filterStatus]
@@ -46,19 +36,32 @@ export function TasksPage() {
 
   const form = useForm<TaskForm>({
     resolver: zodResolver(taskSchema),
-    defaultValues: { title: "", description: "", priority: "medium", due_date: "" },
+    defaultValues: { title: "", description: "", priority: "medium", status: "pending" },
   });
 
-  const handleCreate = async (values: TaskForm) => {
+  const handleSubmitTask = async (values: TaskForm) => {
     try {
-      const payload: TaskCreate = {
-        title: values.title,
-        description: values.description || null,
-        priority: values.priority,
-      };
-      await tasksService.create(payload);
+      if (taskBeingEdited) {
+        const payload: TaskUpdate = {
+          title: values.title,
+          description: values.description || null,
+          priority: values.priority,
+          status: values.status,
+        };
+        await tasksService.update(taskBeingEdited.id, payload);
+        setAlert({ message: "Tarea actualizada correctamente.", type: "success" });
+      } else {
+        const payload: TaskCreate = {
+          title: values.title,
+          description: values.description || null,
+          priority: values.priority,
+        };
+        await tasksService.create(payload);
+        setAlert({ message: "Tarea creada correctamente.", type: "success" });
+      }
       form.reset();
       setModalOpen(false);
+      setTaskBeingEdited(null);
       await reload();
     } catch (err) {
       form.setError("root", { message: getErrorMessage(err) });
@@ -67,6 +70,35 @@ export function TasksPage() {
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setTaskBeingEdited(task);
+    setModalOpen(true);
+    form.reset({
+      title: task.title,
+      description: task.description ?? "",
+      priority: task.priority as "low" | "medium" | "high",
+      status: task.status as "pending" | "completed",
+    });
+  };
+
+  const handleDeleteTask = async (task: Task) => {
+    const confirmed = window.confirm(`¿Seguro que deseas eliminar la tarea "${task.title}"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await tasksService.remove(task.id);
+      setAlert({ message: "Tarea eliminada correctamente.", type: "success" });
+      if (selectedTask?.id === task.id) {
+        setSelectedTask(null);
+      }
+      await reload();
+    } catch (err) {
+      setAlert({ message: getErrorMessage(err), type: "error" });
+    }
   };
 
   return (
@@ -83,6 +115,8 @@ export function TasksPage() {
             data-testid="create-button"
             onClick={() => {
               setSelectedTask(null);
+              setTaskBeingEdited(null);
+              setAlert(null);
               form.reset();
               setModalOpen(true);
             }}
@@ -90,6 +124,8 @@ export function TasksPage() {
             + Nueva tarea
           </Button>
         </div>
+
+        {alert ? <Alert type={alert.type} message={alert.message} /> : null}
 
         {error && (
           <div>
@@ -155,6 +191,26 @@ export function TasksPage() {
                     <span style={{ fontSize: "0.85rem", color: "#888" }}>
                       {task.priority} · {task.status}
                     </span>
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <Button
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTask(task);
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDeleteTask(task);
+                        }}
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -176,20 +232,29 @@ export function TasksPage() {
       </div>
 
       {modalOpen && (
-        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setModalOpen(false);
+            setTaskBeingEdited(null);
+          }}
+        >
           <div className="modal" data-testid="task-creation-modal" role="dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Nueva tarea</h2>
+              <h2>{taskBeingEdited ? "Editar tarea" : "Nueva tarea"}</h2>
               <button
                 type="button"
                 aria-label="Close"
                 className="modal-close"
-                onClick={() => setModalOpen(false)}
+                onClick={() => {
+                  setModalOpen(false);
+                  setTaskBeingEdited(null);
+                }}
               >
                 ✕
               </button>
             </div>
-            <form onSubmit={form.handleSubmit(handleCreate)}>
+            <form onSubmit={form.handleSubmit(handleSubmitTask)}>
               <div className="modal-content">
                 {form.formState.errors.root && (
                   <div data-testid="form-error" style={{ color: "var(--error)", marginBottom: 8 }}>
@@ -219,21 +284,14 @@ export function TasksPage() {
                     <option value="high">Alta</option>
                   </select>
                 </label>
-                <label style={{ display: "block", marginTop: 12 }}>
-                  Fecha límite
-                  <input
-                    type="date"
-                    {...form.register("due_date")}
-                    name="due_date"
-                    min={minDueDate}
-                    className="input"
-                    style={{ width: "100%", marginTop: 4 }}
-                  />
-                </label>
-                {form.formState.errors.due_date?.message && (
-                  <p style={{ color: "var(--error)", marginTop: 4, marginBottom: 0 }}>
-                    {form.formState.errors.due_date.message}
-                  </p>
+                {taskBeingEdited && (
+                  <label style={{ display: "block", marginTop: 12 }}>
+                    Estado
+                    <select {...form.register("status")} name="status" className="input" style={{ width: "100%", marginTop: 4 }}>
+                      <option value="pending">Pendiente</option>
+                      <option value="completed">Completada</option>
+                    </select>
+                  </label>
                 )}
               </div>
               <div className="modal-footer">
@@ -241,7 +299,10 @@ export function TasksPage() {
                   type="button"
                   variant="secondary"
                   data-testid="cancel-button"
-                  onClick={() => setModalOpen(false)}
+                  onClick={() => {
+                    setModalOpen(false);
+                    setTaskBeingEdited(null);
+                  }}
                 >
                   Cancelar
                 </Button>
@@ -250,7 +311,7 @@ export function TasksPage() {
                   data-testid="submit-task-button"
                   disabled={form.formState.isSubmitting}
                 >
-                  {form.formState.isSubmitting ? "Guardando..." : "Crear"}
+                  {form.formState.isSubmitting ? "Guardando..." : taskBeingEdited ? "Actualizar" : "Crear"}
                 </Button>
               </div>
             </form>

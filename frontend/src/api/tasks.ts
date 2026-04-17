@@ -19,7 +19,7 @@ export type TaskCreate = {
 export type TaskUpdate = {
   title?: string;
   description?: string | null;
-  status?: string;
+  status?: "pending" | "completed";
   priority?: string;
 };
 
@@ -41,4 +41,8 @@ export async function createTask(payload: TaskCreate) {
 export async function updateTask(id: number, payload: TaskUpdate) {
   const { data } = await http.put<Task>(`/tasks/${id}`, payload);
   return data;
+}
+
+export async function deleteTask(id: number) {
+  await http.delete(`/tasks/${id}`);
 }

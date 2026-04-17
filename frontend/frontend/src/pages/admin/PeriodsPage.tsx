@@ -12,24 +12,42 @@ import { useFetch } from "../../hooks/useFetch";
 import { getErrorMessage } from "../../utils/apiError";
 import type { PeriodResponse } from "../../api/periods";
 
+const getTodayDateString = () => {
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  return today.toISOString().split("T")[0];
+};
+
 const createSchema = z.object({
   code: z.string().min(2),
   name: z.string().min(3),
-  start_date: z.string().min(8),
-  end_date: z.string().min(8)
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido")
+    .refine((value) => value >= getTodayDateString(), "La fecha no puede ser anterior a hoy"),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido")
+    .refine((value) => value >= getTodayDateString(), "La fecha no puede ser anterior a hoy")
+}).refine((data) => new Date(data.start_date) < new Date(data.end_date), {
+  message: "La fecha de inicio debe ser anterior a la fecha de fin",
+  path: ["end_date"]
 });
 
 const updateSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(3).optional(),
-  start_date: z.string().optional(),
-  end_date: z.string().optional()
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido")
+    .refine((value) => value >= getTodayDateString(), "La fecha no puede ser anterior a hoy")
+    .optional()
+    .or(z.literal("")),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido")
+    .refine((value) => value >= getTodayDateString(), "La fecha no puede ser anterior a hoy")
+    .optional()
+    .or(z.literal(""))
 });
 
 type CreateForm = z.infer<typeof createSchema>;
 type UpdateForm = z.infer<typeof updateSchema>;
 
 export function PeriodsPage() {
+  const minDate = getTodayDateString();
   const [alert, setAlert] = useState<{ message: string; variant: "success" | "error" } | null>(
     null
   );
@@ -102,12 +120,16 @@ export function PeriodsPage() {
               error={createForm.formState.errors.name?.message}
             />
             <Input
-              label="Fecha inicio (YYYY-MM-DD)"
+              type="date"
+              label="Fecha inicio"
+              min={minDate}
               {...createForm.register("start_date")}
               error={createForm.formState.errors.start_date?.message}
             />
             <Input
-              label="Fecha fin (YYYY-MM-DD)"
+              type="date"
+              label="Fecha fin"
+              min={minDate}
               {...createForm.register("end_date")}
               error={createForm.formState.errors.end_date?.message}
             />
@@ -128,12 +150,16 @@ export function PeriodsPage() {
               error={updateForm.formState.errors.name?.message}
             />
             <Input
+              type="date"
               label="Fecha inicio (opcional)"
+              min={minDate}
               {...updateForm.register("start_date")}
               error={updateForm.formState.errors.start_date?.message}
             />
             <Input
+              type="date"
               label="Fecha fin (opcional)"
+              min={minDate}
               {...updateForm.register("end_date")}
               error={updateForm.formState.errors.end_date?.message}
             />

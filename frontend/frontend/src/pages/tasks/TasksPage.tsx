@@ -12,16 +12,28 @@ import { useFetch } from "../../hooks/useFetch";
 import { getErrorMessage } from "../../utils/apiError";
 import type { Task, TaskCreate } from "../../api/tasks";
 
+const getTodayDateString = () => {
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  return today.toISOString().split("T")[0];
+};
+
 const taskSchema = z.object({
   title: z.string().min(1, "Título requerido"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high"]).default("medium"),
-  due_date: z.string().optional(),
+  due_date: z
+    .string()
+    .optional()
+    .refine((value) => !value || value >= getTodayDateString(), {
+      message: "La fecha límite no puede ser anterior a hoy",
+    }),
 });
 
 type TaskForm = z.infer<typeof taskSchema>;
 
 export function TasksPage() {
+  const minDueDate = getTodayDateString();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [search, setSearch] = useState("");
@@ -164,9 +176,8 @@ export function TasksPage() {
       </div>
 
       {modalOpen && (
-        <>
-          <div className="modal-overlay" onClick={() => setModalOpen(false)} />
-          <div className="modal" data-testid="task-creation-modal" role="dialog">
+        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+          <div className="modal" data-testid="task-creation-modal" role="dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Nueva tarea</h2>
               <button
@@ -214,10 +225,16 @@ export function TasksPage() {
                     type="date"
                     {...form.register("due_date")}
                     name="due_date"
+                    min={minDueDate}
                     className="input"
                     style={{ width: "100%", marginTop: 4 }}
                   />
                 </label>
+                {form.formState.errors.due_date?.message && (
+                  <p style={{ color: "var(--error)", marginTop: 4, marginBottom: 0 }}>
+                    {form.formState.errors.due_date.message}
+                  </p>
+                )}
               </div>
               <div className="modal-footer">
                 <Button
@@ -238,7 +255,7 @@ export function TasksPage() {
               </div>
             </form>
           </div>
-        </>
+        </div>
       )}
     </DashboardLayout>
   );

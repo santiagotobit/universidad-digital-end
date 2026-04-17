@@ -9,9 +9,15 @@ from app.users.models import User
 from app.tasks.schemas import TaskCreate, TaskUpdate
 
 
+def _is_admin(user: User) -> bool:
+    return any(role.name == "Administrador" for role in user.roles)
+
+
 def list_tasks(db: Session, user: User, search: str | None = None, status: str | None = None) -> list[Task]:
     """Lista tareas del usuario autenticado, opcionalmente filtradas."""
-    q = select(Task).where(Task.created_by_id == user.id)
+    q = select(Task)
+    if not _is_admin(user):
+        q = q.where(Task.created_by_id == user.id)
     if search:
         q = q.where(Task.title.ilike(f"%{search}%"))
     if status:
@@ -21,10 +27,11 @@ def list_tasks(db: Session, user: User, search: str | None = None, status: str |
 
 
 def get_task(db: Session, task_id: int, user: User) -> Task:
-    """Obtiene una tarea por ID (solo del usuario)."""
-    task = db.scalar(
-        select(Task).where(Task.id == task_id, Task.created_by_id == user.id)
-    )
+    """Obtiene una tarea por ID."""
+    q = select(Task).where(Task.id == task_id)
+    if not _is_admin(user):
+        q = q.where(Task.created_by_id == user.id)
+    task = db.scalar(q)
     if not task:
         raise NotFoundError("Tarea no encontrada.")
     return task
@@ -35,6 +42,7 @@ def create_task(db: Session, data: TaskCreate, user: User) -> Task:
     task = Task(
         title=data.title,
         description=data.description,
+        due_date=data.due_date,
         priority=data.priority,
         status="pending",
         created_by_id=user.id,
@@ -52,6 +60,8 @@ def update_task(db: Session, task_id: int, data: TaskUpdate, user: User) -> Task
         task.title = data.title
     if data.description is not None:
         task.description = data.description
+    if "due_date" in data.model_fields_set:
+        task.due_date = data.due_date
     if data.status is not None:
         task.status = data.status
     if data.priority is not None:

@@ -4,6 +4,7 @@ export type Task = {
   id: number;
   title: string;
   description: string | null;
+  due_date: string | null;
   status: string;
   priority: string;
   created_at: string;
@@ -13,12 +14,14 @@ export type Task = {
 export type TaskCreate = {
   title: string;
   description?: string | null;
+  due_date?: string | null;
   priority?: string;
 };
 
 export type TaskUpdate = {
   title?: string;
   description?: string | null;
+  due_date?: string | null;
   status?: "pending" | "completed";
   priority?: string;
 };

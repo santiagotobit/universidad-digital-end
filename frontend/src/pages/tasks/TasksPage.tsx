@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { React, useCallback, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -12,16 +12,41 @@ import { useFetch } from "../../hooks/useFetch";
 import { getErrorMessage } from "../../utils/apiError";
 import type { Task, TaskCreate, TaskUpdate } from "../../api/tasks";
 
+// const taskSchema = z.object({
+//   title: z.string().min(1, "Título requerido"),
+//   description: z.string().optional(),
+//   due_date: z
+//     .string()
+//     .optional()
+//     .transform((value) => (value === "" ? undefined : value))
+//     .refine((value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value), "Formato de fecha inválido"),
+//   priority: z.enum(["low", "medium", "high"]).default("medium"),
+//   status: z.enum(["pending", "completed"]).optional(),
+// });
+
+const getTodayDateString = () => {
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  return today.toISOString().split("T")[0];
+};
+
 const taskSchema = z.object({
   title: z.string().min(1, "Título requerido"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high"]).default("medium"),
+  due_date: z
+    .string()
+    .optional()
+    .refine((value) => !value || value >= getTodayDateString(), {
+      message: "La fecha límite no puede ser anterior a hoy",
+    }),
   status: z.enum(["pending", "completed"]).optional(),
 });
 
 type TaskForm = z.infer<typeof taskSchema>;
 
 export function TasksPage() {
+  const minDueDate = getTodayDateString();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskBeingEdited, setTaskBeingEdited] = useState<Task | null>(null);
@@ -36,15 +61,18 @@ export function TasksPage() {
 
   const form = useForm<TaskForm>({
     resolver: zodResolver(taskSchema),
-    defaultValues: { title: "", description: "", priority: "medium", status: "pending" },
+    // defaultValues: { title: "", description: "", due_date: "", priority: "medium", status: "pending" },
+      defaultValues: { title: "", description: "", priority: "medium", due_date: "" },
   });
 
   const handleSubmitTask = async (values: TaskForm) => {
     try {
+      const due_date = values.due_date ? values.due_date : null;
       if (taskBeingEdited) {
         const payload: TaskUpdate = {
           title: values.title,
           description: values.description || null,
+          due_date,
           priority: values.priority,
           status: values.status,
         };
@@ -54,6 +82,7 @@ export function TasksPage() {
         const payload: TaskCreate = {
           title: values.title,
           description: values.description || null,
+          due_date,
           priority: values.priority,
         };
         await tasksService.create(payload);
@@ -78,6 +107,7 @@ export function TasksPage() {
     form.reset({
       title: task.title,
       description: task.description ?? "",
+      due_date: task.due_date ?? "",
       priority: task.priority as "low" | "medium" | "high",
       status: task.status as "pending" | "completed",
     });
@@ -189,7 +219,7 @@ export function TasksPage() {
                     <strong>{task.title}</strong>
                     {task.description && <p style={{ margin: "4px 0 0", fontSize: "0.9rem", color: "#666" }}>{task.description}</p>}
                     <span style={{ fontSize: "0.85rem", color: "#888" }}>
-                      {task.priority} · {task.status}
+                      {task.priority} · {task.status}{task.due_date ? ` · Vence ${task.due_date}` : ""}
                     </span>
                     <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                       <Button
@@ -227,6 +257,7 @@ export function TasksPage() {
             <h3>{selectedTask.title}</h3>
             <p>{selectedTask.description || "Sin descripción"}</p>
             <p>Prioridad: {selectedTask.priority} | Estado: {selectedTask.status}</p>
+            <p>Fecha límite: {selectedTask.due_date ?? "Sin fecha"}</p>
           </div>
         )}
       </div>
@@ -272,6 +303,17 @@ export function TasksPage() {
                     {...form.register("description")}
                     name="description"
                     rows={3}
+                    className="input"
+                    style={{ width: "100%", marginTop: 4 }}
+                  />
+                </label>
+                <label style={{ display: "block", marginTop: 12 }}>
+                  Fecha límite
+                  <input
+                    type="date"
+                    {...form.register("due_date")}
+                    name="due_date"
+                    min={minDueDate}
                     className="input"
                     style={{ width: "100%", marginTop: 4 }}
                   />

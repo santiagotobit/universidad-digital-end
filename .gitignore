@@ -7,6 +7,11 @@ backend/.pytest_cache/
 backend/__pycache__/
 backend/tests/__pycache__/
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
 # Python
 __pycache__/
 *.pyc
@@ -37,3 +42,5 @@ backend/node_modules/
 # Archivos binarios
 *.node
 *.exe
+
+backend1.zip

@@ -1,3 +1,4 @@
+# config.py
 from __future__ import annotations
 
 from dotenv import load_dotenv
@@ -15,7 +16,6 @@ class Settings(BaseSettings):
     env: str = Field(default="development", validation_alias=AliasChoices("APP_ENV", "ENV"))
 
     database_url: str = Field(
-        default="postgresql+psycopg://postgres:1234@localhost:5432/universidad",
         validation_alias=AliasChoices("APP_DATABASE_URL", "DATABASE_URL"),
     )
 

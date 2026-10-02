@@ -11,6 +11,7 @@ TEST_DATABASE_URL = f"sqlite:///{_test_db_path}"
 
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["APP_JWT_SECRET"] = "test-secret-for-ci-only"
 
 from app.core.database import Base
 from app.core.deps import get_db

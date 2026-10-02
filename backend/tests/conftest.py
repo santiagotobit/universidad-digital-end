@@ -4,20 +4,25 @@ import tempfile
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
+
+# BD efímera: fichero temporal fuera del proyecto (no test.db en repo, se borra al final)
+_test_db_path = os.path.join(tempfile.gettempdir(), f"universidad_digital_test_{os.getpid()}.db")
+TEST_DATABASE_URL = f"sqlite:///{_test_db_path}"
+
+os.environ["APP_ENV"] = "test"
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
 from app.core.database import Base
 from app.core.deps import get_db
-from app.core.config import settings
+# from app.core.config import settings
 
 # Load fixtures
 pytest_plugins = [
     "tests.fixtures.sample_data",
 ]
 
-# BD efímera: fichero temporal fuera del proyecto (no test.db en repo, se borra al final)
-_test_db_path = os.path.join(tempfile.gettempdir(), f"universidad_digital_test_{os.getpid()}.db")
-TEST_DATABASE_URL = f"sqlite:///{_test_db_path}"
-os.environ["APP_ENV"] = "test"
-os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+
 
 
 @pytest.fixture(scope="session")

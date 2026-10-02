@@ -97,7 +97,7 @@ def update_task_endpoint(
     )
 
 
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None,)
 def delete_task_endpoint(
     task_id: int,
     db: Session = Depends(get_db),
